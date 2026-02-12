@@ -7,7 +7,7 @@
 使用方法：
 1. git clone https://github.com/zealotzcq/pixel-bead-skill.git
 
-2. 将pixel-bead文件夹复制到你的技能文件夹中
+2. 将pixel-bead-skill目录下的pixel-bead文件夹复制到你的技能文件夹中
 
 3. 打开opencode/claude code等工具，输入关键词"拼豆"
 
