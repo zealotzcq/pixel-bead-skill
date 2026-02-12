@@ -19,6 +19,17 @@
     .btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
     .btn.csv-btn { background: linear-gradient(135deg, #e0e0e0 0%, #d0d0d0 100%); color: #666; padding: 8px 20px; font-size: 14px; font-weight: 400; }
     .btn.csv-btn:hover { transform: none; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); background: linear-gradient(135deg, #d0d0d0 0%, #c0c0c0 100%); }
+    .btn.stop-btn { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%); padding: 8px 16px; font-size: 14px; }
+    .btn.stop-btn:hover { transform: none; box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3); background: linear-gradient(135deg, #ee5a5a 0%, #dd4a4a 100%); }
+    .btn.stop-btn:disabled { background: #ccc; cursor: not-allowed; }
+    .stop-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: stopSpin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes stopSpin { to { transform: rotate(360deg); } }
+    .btn-stop-content { display: flex; align-items: center; justify-content: center; }
+    .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .header-container h1 { margin: 0; }
+    .header-right { display: flex; align-items: center; gap: 15px; }
+    .lang-selector { padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; cursor: pointer; background: white; }
+    .lang-selector:hover { border-color: #667eea; }
     .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; }
     .file-input-wrapper input[type="file"] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; }
     input[type="number"] { padding: 6px 10px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 14px; width: 70px; text-align: center; }
@@ -68,79 +79,191 @@
 </head>
 <body>
   <div class="container">
-    <h1>拼豆图生成器</h1>
+    <div class="header-container">
+      <h1 data-i18n="title">拼豆图生成器</h1>
+      <div class="header-right">
+        <select class="lang-selector" id="langSelector">
+          <option value="zh">中文</option>
+          <option value="en">English</option>
+        </select>
+        <button class="btn stop-btn" id="stopBtn"><span class="btn-stop-content" id="stopBtnContent" data-i18n="stopService">停止服务</span></button>
+      </div>
+    </div>
     <div class="controls-section">
       <div class="controls-row">
         <div class="control-group">
-          <label>最大值：</label>
+          <label data-i18n="maxResolution">最大值：</label>
           <input type="number" id="maxResolution" value="200" min="10" max="500" style="width: 70px;">
         </div>
         <div class="control-group">
-          <label>分辨率：</label>
+          <label data-i18n="resolution">分辨率：</label>
           <input type="range" id="resolution" min="10" max="200" value="80">
           <span class="current-resolution" id="currentResolution">80 x 80</span>
         </div>
       </div>
       <div class="controls-row">
         <div class="control-group">
-          <label>当前色表：</label>
+          <label data-i18n="currentPalette">当前色表：</label>
           <span class="current-palette" id="currentPalette">MARD221</span>
         </div>
         <div class="file-input-wrapper">
-          <button class="btn csv-btn">上传色表CSV</button>
+          <button class="btn csv-btn" data-i18n="uploadCsv">上传色表CSV</button>
           <input type="file" id="csvInput" accept=".csv">
         </div>
         <div class="grid-toggle">
           <input type="checkbox" id="useCircle" checked>
-          <label for="useCircle">圆形拼豆</label>
+          <label for="useCircle" data-i18n="circleBead">圆形拼豆</label>
         </div>
       </div>
     </div>
     <div class="main-content">
       <div class="left-panel">
-        <div class="panel-title">原始图片</div>
+        <div class="panel-title" data-i18n="originalImage">原始图片</div>
         <div class="canvas-container">
           <canvas id="originalCanvas" width="400" height="400"></canvas>
         </div>
         <div class="file-input-wrapper">
-          <button class="btn">上传图片</button>
+          <button class="btn" data-i18n="uploadImage">上传图片</button>
           <input type="file" id="imageInput" accept="image/*">
         </div>
       </div>
       <div class="right-panel">
-        <div class="panel-title">拼豆预览</div>
+        <div class="panel-title" data-i18n="beadPreview">拼豆预览</div>
         <div class="canvas-container">
           <canvas id="gridCanvas" width="400" height="400"></canvas>
         </div>
-        <button class="btn" id="generateBtn" disabled>生成拼豆图</button>
+        <button class="btn" id="generateBtn" disabled data-i18n="generatePattern">生成拼豆图</button>
       </div>
     </div>
     <div class="loading" id="loading">
       <div class="spinner"></div>
-      <p>正在生成拼豆图...</p>
+      <p data-i18n="generating">正在生成拼豆图...</p>
     </div>
     <div id="resultSection" style="display: none;">
       <div class="stats">
         <div class="stat-card">
           <div class="stat-value" id="totalBeads">0</div>
-          <div class="stat-label">总拼豆数</div>
+          <div class="stat-label" data-i18n="totalBeads">总拼豆数</div>
         </div>
         <div class="stat-card">
           <div class="stat-value" id="uniqueColors">0</div>
-          <div class="stat-label">使用颜色数</div>
+          <div class="stat-label" data-i18n="uniqueColors">使用颜色数</div>
         </div>
       </div>
       <div class="legend-section">
-        <h3 class="legend-title">颜色图例</h3>
+        <h3 class="legend-title" data-i18n="colorLegend">颜色图例</h3>
         <div class="legend-grid" id="legendGrid"></div>
       </div>
       <div class="download-section">
-        <button class="btn" id="downloadBtn">下载拼豆图</button>
-        <button class="btn" id="exportPaletteBtn" style="margin-left: 10px;">导出色表</button>
+        <button class="btn" id="downloadBtn" data-i18n="downloadPattern">下载拼豆图</button>
+        <button class="btn" id="exportPaletteBtn" style="margin-left: 10px;" data-i18n="exportPalette">导出色表</button>
       </div>
     </div>
   </div>
   <script>
+    const i18n = {
+      zh: {
+        title: '拼豆图生成器',
+        stopService: '停止服务',
+        stopping: '正在关闭服务',
+        serviceClosed: '服务已关闭',
+        confirmStop: '确定要停止服务吗？停止后需要重新运行命令启动。',
+        maxResolution: '最大值：',
+        resolution: '分辨率：',
+        currentPalette: '当前色表：',
+        uploadCsv: '上传色表CSV',
+        circleBead: '圆形拼豆',
+        originalImage: '原始图片',
+        uploadImage: '上传图片',
+        beadPreview: '拼豆预览',
+        generatePattern: '生成拼豆图',
+        generating: '正在生成拼豆图...',
+        totalBeads: '总拼豆数',
+        uniqueColors: '使用颜色数',
+        colorLegend: '颜色图例',
+        downloadPattern: '下载拼豆图',
+        exportPalette: '导出色表',
+        unusedColors: '未使用的有效颜色',
+        deletedColors: '已删除的颜色',
+        deleted: '已删除',
+        particles: '粒',
+        noAvailableColors: '没有可用的颜色',
+        successLoadPalette: '成功加载色表 {name}，共 {count} 种颜色',
+        error: '错误：',
+        uploadFailed: '上传失败：',
+        noPalette: '当前没有色表'
+      },
+      en: {
+        title: 'Perler Bead Pattern Generator',
+        stopService: 'Stop Service',
+        stopping: 'Stopping service...',
+        serviceClosed: 'Service closed',
+        confirmStop: 'Are you sure you want to stop the service? You will need to restart the command to start again.',
+        maxResolution: 'Max:',
+        resolution: 'Resolution:',
+        currentPalette: 'Current Palette:',
+        uploadCsv: 'Upload CSV',
+        circleBead: 'Circle Beads',
+        originalImage: 'Original Image',
+        uploadImage: 'Upload Image',
+        beadPreview: 'Bead Preview',
+        generatePattern: 'Generate Pattern',
+        generating: 'Generating bead pattern...',
+        totalBeads: 'Total Beads',
+        uniqueColors: 'Colors Used',
+        colorLegend: 'Color Legend',
+        downloadPattern: 'Download Pattern',
+        exportPalette: 'Export Palette',
+        unusedColors: 'Unused valid colors',
+        deletedColors: 'Deleted colors',
+        deleted: 'Deleted',
+        particles: 'beads',
+        noAvailableColors: 'No available colors',
+        successLoadPalette: 'Successfully loaded palette {name} with {count} colors',
+        error: 'Error:',
+        uploadFailed: 'Upload failed:',
+        noPalette: 'No current palette'
+      }
+    };
+
+    let currentLang = 'zh';
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.querySelectorAll('[data-i18n]').forEach(function(el) {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[lang][key]) {
+          el.textContent = i18n[lang][key];
+        }
+      });
+      localStorage.setItem('beadArtLang', lang);
+    }
+
+    function detectLanguage() {
+      const userLang = navigator.language || navigator.userLanguage;
+      if (userLang && (userLang.startsWith('zh') || userLang.includes('CN'))) {
+        return 'zh';
+      }
+      return 'en';
+    }
+
+    function initLanguage() {
+      const savedLang = localStorage.getItem('beadArtLang');
+      if (savedLang && i18n[savedLang]) {
+        currentLang = savedLang;
+      } else {
+        currentLang = detectLanguage();
+      }
+      document.getElementById('langSelector').value = currentLang;
+      setLanguage(currentLang);
+    }
+
+    document.getElementById('langSelector').addEventListener('change', function(e) {
+      setLanguage(e.target.value);
+    });
+
+    initLanguage();
+
     const imageInput = document.getElementById('imageInput');
     const generateBtn = document.getElementById('generateBtn');
     const downloadBtn = document.getElementById('downloadBtn');
@@ -245,25 +368,25 @@
       }).sort(function(a, b) { return a.code.localeCompare(b.code); });
 
       document.getElementById('legendGrid').innerHTML = usedColors.map(function(item) {
-        return '<div class="legend-item draggable" data-code="' + item.code + '" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"><button class="delete-btn" onclick="deleteColor(\'' + item.code + '\')">✕</button><div class="bead-swatch" style="background-color:' + item.hex + ';"></div><div class="color-code">' + item.code + '</div><div class="color-count">' + item.count + ' 粒</div></div>';
+        return '<div class="legend-item draggable" data-code="' + item.code + '" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"><button class="delete-btn" onclick="deleteColor(\'' + item.code + '\')">✕</button><div class="bead-swatch" style="background-color:' + item.hex + ';"></div><div class="color-code">' + item.code + '</div><div class="color-count">' + item.count + ' ' + i18n[currentLang].particles + '</div></div>';
       }).join('');
 
       let extraHtml = '<div class="legend-section-extra">';
-      
+
       if (unusedColors.length > 0) {
-        extraHtml += '<div class="legend-toggle" onclick="toggleLegend(this)">未使用的有效颜色 (' + unusedColors.length + ')</div>';
+        extraHtml += '<div class="legend-toggle" onclick="toggleLegend(this)">' + i18n[currentLang].unusedColors + ' (' + unusedColors.length + ')</div>';
         extraHtml += '<div class="legend-grid collapsed">';
         extraHtml += unusedColors.map(function(color) {
-          return '<div class="legend-item unused" data-code="' + color.code + '" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"><div class="bead-swatch" style="background-color:' + color.hex + ';"></div><div class="color-code">' + color.code + '</div><div class="color-count">0 粒</div></div>';
+          return '<div class="legend-item unused" data-code="' + color.code + '" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"><div class="bead-swatch" style="background-color:' + color.hex + ';"></div><div class="color-code">' + color.code + '</div><div class="color-count">0 ' + i18n[currentLang].particles + '</div></div>';
         }).join('');
         extraHtml += '</div>';
       }
-      
+
       if (deletedColors.length > 0) {
-        extraHtml += '<div class="legend-toggle" onclick="toggleLegend(this)">已删除的颜色 (' + deletedColors.length + ')</div>';
+        extraHtml += '<div class="legend-toggle" onclick="toggleLegend(this)">' + i18n[currentLang].deletedColors + ' (' + deletedColors.length + ')</div>';
         extraHtml += '<div class="legend-grid collapsed">';
         extraHtml += deletedColors.map(function(color) {
-          return '<div class="legend-item deleted"><button class="restore-btn" onclick="restoreColor(\'' + color.code + '\')">↺</button><div class="bead-swatch" style="background-color:' + color.hex + ';"></div><div class="color-code">' + color.code + '</div><div class="color-count">已删除</div></div>';
+          return '<div class="legend-item deleted"><button class="restore-btn" onclick="restoreColor(\'' + color.code + '\')">↺</button><div class="bead-swatch" style="background-color:' + color.hex + ';"></div><div class="color-code">' + color.code + '</div><div class="color-count">' + i18n[currentLang].deleted + '</div></div>';
         }).join('');
         extraHtml += '</div>';
       }
@@ -368,7 +491,7 @@
       });
       
       if (availableColors.length === 0) {
-        alert('没有可用的颜色');
+        alert(i18n[currentLang].noAvailableColors);
         return;
       }
       
@@ -535,20 +658,20 @@
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.error) {
-          alert('错误: ' + data.error);
+          alert(i18n[currentLang].error + ' ' + data.error);
           return;
         }
         deletedColorCodes = [];
         return initColorTable();
       })
       .then(function() {
-        alert('成功加载色表 ' + currentColorTableName + '，共 ' + currentColorTable.length + ' 种颜色');
+        alert(i18n[currentLang].successLoadPalette.replace('{name}', currentColorTableName).replace('{count}', currentColorTable.length));
         if (currentImageData) {
           generateBeadPattern();
         }
       })
       .catch(function(error) {
-        alert('上传失败: ' + error.message);
+        alert(i18n[currentLang].uploadFailed + ' ' + error.message);
       });
     });
 
@@ -656,9 +779,34 @@
       link.click();
     });
 
+    stopBtn.addEventListener('click', function() {
+      if (confirm(i18n[currentLang].confirmStop)) {
+        stopBtn.disabled = true;
+        document.getElementById('stopBtnContent').innerHTML = '<span class="stop-spinner"></span>' + i18n[currentLang].stopping;
+
+        fetch('/api/stop', {
+          method: 'POST'
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          document.getElementById('stopBtnContent').textContent = i18n[currentLang].serviceClosed;
+          setTimeout(function() {
+            window.close();
+          }, 5000);
+        })
+        .catch(function(error) {
+          console.error('停止服务失败:', error);
+          document.getElementById('stopBtnContent').textContent = i18n[currentLang].serviceClosed;
+          setTimeout(function() {
+            window.close();
+          }, 5000);
+        });
+      }
+    });
+
     document.getElementById('exportPaletteBtn').addEventListener('click', function() {
       if (!currentColorTable || currentColorTable.length === 0) {
-        alert('当前没有色表');
+        alert(i18n[currentLang].noPalette);
         return;
       }
       

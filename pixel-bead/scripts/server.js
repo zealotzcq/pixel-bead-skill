@@ -2,10 +2,12 @@ const express = require('express')
 const multer = require('multer')
 const path = require('path')
 const fs = require('fs')
+const open = require('open')
 
 const app = express()
 const upload = multer({ dest: 'uploads/' })
 const PORT = 3000
+let server = null
 
 let currentColorTable = []
 let currentColorTableName = 'MARD221'
@@ -190,6 +192,18 @@ app.get('/api/color-table', function(req, res) {
 
 loadDefaultColorTable();
 
-app.listen(PORT, function() {
+app.post('/api/stop', function(req, res) {
+  console.log('正在停止服务...')
+  res.json({ success: true, message: '服务正在关闭' })
+  server.close(function() {
+    console.log('服务已停止')
+    process.exit(0)
+  })
+})
+
+server = app.listen(PORT, function() {
   console.log('拼豆图生成器已启动: http://localhost:' + PORT)
+  open('http://localhost:' + PORT).catch(function(err) {
+    console.error('无法自动打开浏览器:', err.message)
+  })
 });
