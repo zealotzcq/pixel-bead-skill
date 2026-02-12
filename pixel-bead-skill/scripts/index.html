@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>拼豆图生成器</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+    .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 16px; padding: 30px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); }
+    h1 { text-align: center; color: #333; margin-bottom: 30px; font-size: 32px; }
+    .controls-section { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+    .controls-row { display: flex; align-items: center; gap: 20px; margin-bottom: 15px; flex-wrap: wrap; }
+    .controls-row:last-child { margin-bottom: 0; }
+    .control-group { display: flex; align-items: center; gap: 10px; }
+    label { font-weight: 600; color: #555; }
+    .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); }
+    .btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+    .btn.csv-btn { background: linear-gradient(135deg, #e0e0e0 0%, #d0d0d0 100%); color: #666; padding: 8px 20px; font-size: 14px; font-weight: 400; }
+    .btn.csv-btn:hover { transform: none; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); background: linear-gradient(135deg, #d0d0d0 0%, #c0c0c0 100%); }
+    .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; }
+    .file-input-wrapper input[type="file"] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; }
+    input[type="number"] { padding: 6px 10px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 14px; width: 70px; text-align: center; }
+    input[type="range"] { width: 300px; margin: 0 15px; vertical-align: middle; }
+    .current-resolution { display: inline-block; min-width: 80px; font-weight: 700; color: #667eea; font-size: 18px; }
+    .current-palette { display: inline-block; min-width: 100px; font-weight: 700; color: #667eea; font-size: 16px; }
+    .grid-toggle { display: inline-flex; align-items: center; margin-left: 20px; }
+    .grid-toggle input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+    .grid-toggle label { margin-left: 8px; cursor: pointer; }
+    .main-content { display: flex; gap: 30px; margin-bottom: 30px; }
+    .left-panel, .right-panel { flex: 1; display: flex; flex-direction: column; align-items: center; }
+    .panel-title { font-size: 20px; font-weight: 600; margin-bottom: 15px; color: #333; }
+    .canvas-container { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; }
+    canvas { max-width: 100%; border: 2px solid #ddd; border-radius: 4px; background: white; }
+    .legend-section { margin-top: 20px; }
+    .legend-title { font-size: 20px; font-weight: 600; margin-bottom: 15px; color: #333; }
+    .legend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; max-height: 400px; overflow-y: auto; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+    .legend-item { display: flex; flex-direction: column; align-items: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); position: relative; }
+    .delete-btn { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; background: #ff4444; color: white; border: none; border-radius: 50%; cursor: pointer; font-size: 12px; font-weight: bold; line-height: 1; display: flex; align-items: center; justify-content: center; }
+    .delete-btn:hover { background: #cc0000; }
+    .restore-btn { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; background: #44ff44; color: white; border: none; border-radius: 50%; cursor: pointer; font-size: 12px; font-weight: bold; line-height: 1; display: flex; align-items: center; justify-content: center; }
+    .restore-btn:hover { background: #00cc00; }
+    .legend-section-extra { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 20px; }
+    .legend-toggle { cursor: pointer; display: flex; align-items: center; margin-bottom: 15px; font-size: 16px; font-weight: 600; color: #555; }
+    .legend-toggle:hover { color: #667eea; }
+    .legend-toggle::before { content: '▶'; margin-right: 8px; transition: transform 0.3s; }
+    .legend-toggle.open::before { content: '▼'; }
+    .legend-grid.collapsed { display: none; }
+    .legend-item.deleted { opacity: 0.6; }
+    .legend-item.unused { background: #f8f9fa; }
+    .legend-item.draggable { cursor: move; }
+    .legend-item.dragging { opacity: 0.5; }
+    .legend-item.drag-over { box-shadow: 0 0 0 3px #667eea; }
+    .bead-swatch { width: 45px; height: 45px; border-radius: 50%; border: 3px solid #e0e0e0; margin-bottom: 8px; }
+    .color-code { font-weight: 600; color: #333; font-size: 14px; }
+    .color-count { font-size: 12px; color: #666; margin-top: 4px; }
+    .stats { display: flex; gap: 20px; margin-bottom: 20px; }
+    .stat-card { flex: 1; background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; }
+    .stat-value { font-size: 28px; font-weight: 700; color: #667eea; }
+    .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
+    .loading { display: none; text-align: center; padding: 40px; }
+    .loading.active { display: block; }
+    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .download-section { margin-top: 15px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>拼豆图生成器</h1>
+    <div class="controls-section">
+      <div class="controls-row">
+        <div class="control-group">
+          <label>最大值：</label>
+          <input type="number" id="maxResolution" value="200" min="10" max="500" style="width: 70px;">
+        </div>
+        <div class="control-group">
+          <label>分辨率：</label>
+          <input type="range" id="resolution" min="10" max="200" value="80">
+          <span class="current-resolution" id="currentResolution">80 x 80</span>
+        </div>
+      </div>
+      <div class="controls-row">
+        <div class="control-group">
+          <label>当前色表：</label>
+          <span class="current-palette" id="currentPalette">MARD221</span>
+        </div>
+        <div class="file-input-wrapper">
+          <button class="btn csv-btn">上传色表CSV</button>
+          <input type="file" id="csvInput" accept=".csv">
+        </div>
+        <div class="grid-toggle">
+          <input type="checkbox" id="useCircle" checked>
+          <label for="useCircle">圆形拼豆</label>
+        </div>
+      </div>
+    </div>
+    <div class="main-content">
+      <div class="left-panel">
+        <div class="panel-title">原始图片</div>
+        <div class="canvas-container">
+          <canvas id="originalCanvas" width="400" height="400"></canvas>
+        </div>
+        <div class="file-input-wrapper">
+          <button class="btn">上传图片</button>
+          <input type="file" id="imageInput" accept="image/*">
+        </div>
+      </div>
+      <div class="right-panel">
+        <div class="panel-title">拼豆预览</div>
+        <div class="canvas-container">
+          <canvas id="gridCanvas" width="400" height="400"></canvas>
+        </div>
+        <button class="btn" id="generateBtn" disabled>生成拼豆图</button>
+      </div>
+    </div>
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>正在生成拼豆图...</p>
+    </div>
+    <div id="resultSection" style="display: none;">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-value" id="totalBeads">0</div>
+          <div class="stat-label">总拼豆数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="uniqueColors">0</div>
+          <div class="stat-label">使用颜色数</div>
+        </div>
+      </div>
+      <div class="legend-section">
+        <h3 class="legend-title">颜色图例</h3>
+        <div class="legend-grid" id="legendGrid"></div>
+      </div>
+      <div class="download-section">
+        <button class="btn" id="downloadBtn">下载拼豆图</button>
+        <button class="btn" id="exportPaletteBtn" style="margin-left: 10px;">导出色表</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const imageInput = document.getElementById('imageInput');
+    const generateBtn = document.getElementById('generateBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const originalCanvas = document.getElementById('originalCanvas');
+    const gridCanvas = document.getElementById('gridCanvas');
+    const originalCtx = originalCanvas.getContext('2d');
+    const gridCtx = gridCanvas.getContext('2d');
+    const loading = document.getElementById('loading');
+    const resultSection = document.getElementById('resultSection');
+    const resolutionSlider = document.getElementById('resolution');
+    const maxResolutionInput = document.getElementById('maxResolution');
+    const currentResolutionDisplay = document.getElementById('currentResolution');
+    const useCircleCheckbox = document.getElementById('useCircle');
+    const csvInput = document.getElementById('csvInput');
+    const currentPaletteDisplay = document.getElementById('currentPalette');
+
+    let currentImageData = null;
+    let generatedPattern = null;
+    let currentColorTable = [];
+    let currentColorTableName = '';
+    let deletedColorCodes = [];
+
+    function initColorTable() {
+      return fetch('/api/color-table')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          currentColorTable = data.colors;
+          currentColorTableName = data.tableName;
+          currentPaletteDisplay.textContent = data.tableName;
+        });
+    }
+    initColorTable();
+
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\\d]{2})([a-f\\d]{2})([a-f\\d]{2})$/i.exec(hex);
+      return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+    }
+
+    function rgbToHex(r, g, b) {
+      return '#' + [r, g, b].map(function(x) { return x.toString(16).padStart(2, '0'); }).join('');
+    }
+
+    function findNearestColor(r, g, b) {
+      let minDist = Infinity;
+      let nearest = null;
+      const colors = currentColorTable;
+      for (let i = 0; i < colors.length; i++) {
+        const c = colors[i];
+        const dr = r - c.r;
+        const dg = g - c.g;
+        const db = b - c.b;
+        const dist = dr * dr + dg * dg + db * db;
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = c;
+        }
+      }
+      return nearest;
+    }
+
+    function redrawPattern() {
+      const gridSize = parseInt(resolutionSlider.value);
+      if (!generatedPattern) {
+        gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+        gridCtx.drawImage(originalCanvas, 0, 0);
+        return;
+      }
+      const { pattern, gridSize: ps } = generatedPattern;
+      const cellSize = gridCanvas.width / ps;
+      const useCircle = useCircleCheckbox.checked;
+      gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+      for (let y = 0; y < ps; y++) {
+        for (let x = 0; x < ps; x++) {
+          const color = pattern[y][x];
+          if (!color) continue;
+          gridCtx.fillStyle = color.hex;
+          if (useCircle) {
+            gridCtx.beginPath();
+            gridCtx.arc(x * cellSize + cellSize / 2, y * cellSize + cellSize / 2, cellSize * 0.5, 0, Math.PI * 2);
+            gridCtx.fill();
+          } else {
+            gridCtx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+    }
+
+    function renderLegend() {
+      const usedColors = Object.entries(generatedPattern.colorCounts)
+        .map(function([code, count]) {
+          const color = currentColorTable.find(function(c) { return c.code === code; });
+          return { code: code, hex: color ? color.hex : '#000', count: count };
+        })
+        .sort(function(a, b) { return b.count - a.count; });
+
+      const unusedColors = currentColorTable.filter(function(c) {
+        return !generatedPattern.colorCounts[c.code] && !deletedColorCodes.includes(c.code);
+      });
+
+      const deletedColors = currentColorTable.filter(function(c) {
+        return deletedColorCodes.includes(c.code);
+      }).sort(function(a, b) { return a.code.localeCompare(b.code); });
+
+      document.getElementById('legendGrid').innerHTML = usedColors.map(function(item) {
+        return '<div class="legend-item draggable" data-code="' + item.code + '" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"><button class="delete-btn" onclick="deleteColor(\'' + item.code + '\')">✕</button><div class="bead-swatch" style="background-color:' + item.hex + ';"></div><div class="color-code">' + item.code + '</div><div class="color-count">' + item.count + ' 粒</div></div>';
+      }).join('');
+
+      let extraHtml = '<div class="legend-section-extra">';
+      
+      if (unusedColors.length > 0) {
+        extraHtml += '<div class="legend-toggle" onclick="toggleLegend(this)">未使用的有效颜色 (' + unusedColors.length + ')</div>';
+        extraHtml += '<div class="legend-grid collapsed">';
+        extraHtml += unusedColors.map(function(color) {
+          return '<div class="legend-item unused" data-code="' + color.code + '" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"><div class="bead-swatch" style="background-color:' + color.hex + ';"></div><div class="color-code">' + color.code + '</div><div class="color-count">0 粒</div></div>';
+        }).join('');
+        extraHtml += '</div>';
+      }
+      
+      if (deletedColors.length > 0) {
+        extraHtml += '<div class="legend-toggle" onclick="toggleLegend(this)">已删除的颜色 (' + deletedColors.length + ')</div>';
+        extraHtml += '<div class="legend-grid collapsed">';
+        extraHtml += deletedColors.map(function(color) {
+          return '<div class="legend-item deleted"><button class="restore-btn" onclick="restoreColor(\'' + color.code + '\')">↺</button><div class="bead-swatch" style="background-color:' + color.hex + ';"></div><div class="color-code">' + color.code + '</div><div class="color-count">已删除</div></div>';
+        }).join('');
+        extraHtml += '</div>';
+      }
+      
+      extraHtml += '</div>';
+      
+      const existingExtra = document.querySelector('.legend-section-extra');
+      if (existingExtra) {
+        existingExtra.outerHTML = extraHtml;
+      } else {
+        document.querySelector('.legend-section').insertAdjacentHTML('afterend', extraHtml);
+      }
+    }
+
+    function toggleLegend(element) {
+      element.classList.toggle('open');
+      const grid = element.nextElementSibling;
+      grid.classList.toggle('collapsed');
+    }
+
+    function restoreColor(codeToRestore) {
+      const index = deletedColorCodes.indexOf(codeToRestore);
+      if (index > -1) {
+        deletedColorCodes.splice(index, 1);
+      }
+      renderLegend();
+    }
+
+    let draggedCode = null;
+
+    function handleDragStart(event) {
+      draggedCode = event.currentTarget.getAttribute('data-code');
+      event.currentTarget.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragEnd(event) {
+      event.currentTarget.classList.remove('dragging');
+      const allItems = document.querySelectorAll('.legend-item');
+      allItems.forEach(function(item) {
+        item.classList.remove('drag-over');
+      });
+    }
+
+    function handleDragOver(event) {
+      event.preventDefault();
+      event.currentTarget.classList.add('drag-over');
+    }
+
+    function handleDragLeave(event) {
+      event.currentTarget.classList.remove('drag-over');
+    }
+
+    function handleDrop(event) {
+      event.preventDefault();
+      event.currentTarget.classList.remove('drag-over');
+      
+      const targetCode = event.currentTarget.getAttribute('data-code');
+      
+      if (!draggedCode || !targetCode || draggedCode === targetCode) return;
+      
+      const sourceCode = draggedCode;
+      
+      if (!generatedPattern || !generatedPattern.colorCoordinates[sourceCode]) return;
+      
+      const coords = generatedPattern.colorCoordinates[sourceCode];
+      const sourceColor = currentColorTable.find(function(c) { return c.code === sourceCode; });
+      const targetColor = currentColorTable.find(function(c) { return c.code === targetCode; });
+      
+      if (!sourceColor || !targetColor) return;
+      
+      for (let i = 0; i < coords.length; i++) {
+        const { x, y } = coords[i];
+        generatedPattern.pattern[y][x] = targetColor;
+      }
+      
+      generatedPattern.colorCounts[targetCode] = (generatedPattern.colorCounts[targetCode] || 0) + coords.length;
+      delete generatedPattern.colorCounts[sourceCode];
+      delete generatedPattern.colorCoordinates[sourceCode];
+      
+      if (generatedPattern.colorCoordinates[targetCode]) {
+        generatedPattern.colorCoordinates[targetCode] = generatedPattern.colorCoordinates[targetCode].concat(coords);
+      } else {
+        generatedPattern.colorCoordinates[targetCode] = coords;
+      }
+      
+      redrawPattern();
+      renderLegend();
+      
+      const totalBeads = Object.values(generatedPattern.colorCounts).reduce(function(sum, c) { return sum + c; }, 0);
+      const uniqueColors = Object.keys(generatedPattern.colorCounts).length;
+      document.getElementById('totalBeads').textContent = totalBeads;
+      document.getElementById('uniqueColors').textContent = uniqueColors;
+    }
+
+    function deleteColor(codeToDelete) {
+      if (!generatedPattern || !generatedPattern.colorCoordinates[codeToDelete]) return;
+      
+      const coords = generatedPattern.colorCoordinates[codeToDelete];
+      const availableColors = currentColorTable.filter(function(c) {
+        return c.code !== codeToDelete && !deletedColorCodes.includes(c.code);
+      });
+      
+      if (availableColors.length === 0) {
+        alert('没有可用的颜色');
+        return;
+      }
+      
+      const colorToDeleteObj = currentColorTable.find(function(c) { return c.code === codeToDelete; });
+      let nearestColor = null;
+      let minDist = Infinity;
+      
+      for (let i = 0; i < availableColors.length; i++) {
+        const c = availableColors[i];
+        const dr = colorToDeleteObj.r - c.r;
+        const dg = colorToDeleteObj.g - c.g;
+        const db = colorToDeleteObj.b - c.b;
+        const dist = dr * dr + dg * dg + db * db;
+        if (dist < minDist) {
+          minDist = dist;
+          nearestColor = c;
+        }
+      }
+      
+      if (!nearestColor) return;
+      
+      for (let i = 0; i < coords.length; i++) {
+        const { x, y } = coords[i];
+        generatedPattern.pattern[y][x] = nearestColor;
+      }
+      
+      generatedPattern.colorCounts[nearestColor.code] = (generatedPattern.colorCounts[nearestColor.code] || 0) + coords.length;
+      delete generatedPattern.colorCounts[codeToDelete];
+      delete generatedPattern.colorCoordinates[codeToDelete];
+      
+      if (generatedPattern.colorCoordinates[nearestColor.code]) {
+        generatedPattern.colorCoordinates[nearestColor.code] = generatedPattern.colorCoordinates[nearestColor.code].concat(coords);
+      } else {
+        generatedPattern.colorCoordinates[nearestColor.code] = coords;
+      }
+      
+      deletedColorCodes.push(codeToDelete);
+      
+      redrawPattern();
+      renderLegend();
+      
+      const totalBeads = Object.values(generatedPattern.colorCounts).reduce(function(sum, c) { return sum + c; }, 0);
+      const uniqueColors = Object.keys(generatedPattern.colorCounts).length;
+      document.getElementById('totalBeads').textContent = totalBeads;
+      document.getElementById('uniqueColors').textContent = uniqueColors;
+    }
+
+    function generateBeadPattern() {
+      if (!currentImageData) return;
+      loading.classList.add('active');
+      resultSection.style.display = 'none';
+
+      setTimeout(function() {
+        const gridSize = parseInt(resolutionSlider.value);
+        
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = gridSize;
+        tempCanvas.height = gridSize;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.imageSmoothingEnabled = false;
+        tempCtx.drawImage(originalCanvas, 0, 0, gridSize, gridSize);
+        
+        const imageData = tempCtx.getImageData(0, 0, gridSize, gridSize);
+        const data = imageData.data;
+
+        const pattern = [];
+        const colorCounts = {};
+        const colorCoordinates = {};
+
+        for (let y = 0; y < gridSize; y++) {
+          const row = [];
+          for (let x = 0; x < gridSize; x++) {
+            const idx = (y * gridSize + x) * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const a = data[idx + 3];
+            if (a < 128) {
+              row.push(null);
+            } else {
+              const nearestColor = findNearestColor(r, g, b);
+              row.push(nearestColor);
+              const code = nearestColor.code;
+              colorCounts[code] = (colorCounts[code] || 0) + 1;
+              if (!colorCoordinates[code]) {
+                colorCoordinates[code] = [];
+              }
+              colorCoordinates[code].push({ x: x, y: y });
+            }
+          }
+          pattern.push(row);
+        }
+
+        generatedPattern = { pattern: pattern, colorCounts: colorCounts, gridSize: gridSize, colorCoordinates: colorCoordinates };
+        redrawPattern();
+
+        const totalBeads = Object.values(colorCounts).reduce(function(sum, c) { return sum + c; }, 0);
+        const uniqueColors = Object.keys(colorCounts).length;
+        document.getElementById('totalBeads').textContent = totalBeads;
+        document.getElementById('uniqueColors').textContent = uniqueColors;
+
+        renderLegend();
+
+        loading.classList.remove('active');
+        resultSection.style.display = 'block';
+      }, 50);
+    }
+
+    imageInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          originalCtx.clearRect(0, 0, originalCanvas.width, originalCanvas.height);
+          const scale = Math.min(originalCanvas.width / img.width, originalCanvas.height / img.height);
+          const newWidth = img.width * scale;
+          const newHeight = img.height * scale;
+          const x = (originalCanvas.width - newWidth) / 2;
+          const y = (originalCanvas.height - newHeight) / 2;
+          originalCtx.drawImage(img, x, y, newWidth, newHeight);
+          currentImageData = originalCtx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
+          gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+          gridCtx.drawImage(originalCanvas, 0, 0);
+          generateBtn.disabled = false;
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    maxResolutionInput.addEventListener('change', function() {
+      const maxValue = parseInt(maxResolutionInput.value);
+      if (maxValue >= 10) {
+        resolutionSlider.max = maxValue;
+      }
+    });
+
+    resolutionSlider.addEventListener('input', function() {
+      currentResolutionDisplay.textContent = resolutionSlider.value + ' x ' + resolutionSlider.value;
+    });
+
+    resolutionSlider.addEventListener('change', function() {
+      if (generatedPattern) {
+        generateBeadPattern();
+      } else if (currentImageData) {
+        redrawPattern();
+      }
+    });
+
+    useCircleCheckbox.addEventListener('change', redrawPattern);
+
+    csvInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('csv', file);
+      
+      fetch('/api/upload-csv', {
+        method: 'POST',
+        body: formData
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.error) {
+          alert('错误: ' + data.error);
+          return;
+        }
+        deletedColorCodes = [];
+        return initColorTable();
+      })
+      .then(function() {
+        alert('成功加载色表 ' + currentColorTableName + '，共 ' + currentColorTable.length + ' 种颜色');
+        if (currentImageData) {
+          generateBeadPattern();
+        }
+      })
+      .catch(function(error) {
+        alert('上传失败: ' + error.message);
+      });
+    });
+
+    generateBtn.addEventListener('click', generateBeadPattern);
+
+    downloadBtn.addEventListener('click', function() {
+      if (!generatedPattern) return;
+      
+      const { pattern, gridSize, colorCounts } = generatedPattern;
+      const colors = Object.entries(colorCounts)
+        .map(function([code, count]) {
+          const color = currentColorTable.find(function(c) { return c.code === code; });
+          return { code: code, hex: color ? color.hex : '#000', count: count };
+        })
+        .sort(function(a, b) { return b.count - a.count; });
+      
+      const canvasWidth = 1080;
+      const canvasHeight = 1920;
+      
+      const patternHeight = canvasHeight * 0.5;
+      const legendHeight = canvasHeight * 0.5;
+      
+      const patternPixelSize = patternHeight / gridSize;
+      
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvasWidth;
+      tempCanvas.height = canvasHeight;
+      const tempCtx = tempCanvas.getContext('2d');
+      
+      tempCtx.fillStyle = '#FFFFFF';
+      tempCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+      
+      const patternX = (canvasWidth - patternHeight) / 2;
+      const useCircle = useCircleCheckbox.checked;
+      
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          const color = pattern[y][x];
+          if (!color) continue;
+          tempCtx.fillStyle = color.hex;
+          if (useCircle) {
+            tempCtx.beginPath();
+            tempCtx.arc(patternX + x * patternPixelSize + patternPixelSize / 2, y * patternPixelSize + patternPixelSize / 2, patternPixelSize * 0.5, 0, Math.PI * 2);
+            tempCtx.fill();
+          } else {
+            tempCtx.fillRect(patternX + x * patternPixelSize, y * patternPixelSize, patternPixelSize, patternPixelSize);
+          }
+        }
+      }
+      
+      const legendY = patternHeight;
+      const legendColorCount = colors.length;
+      let bestCols = 1;
+      let bestCellSize = 0;
+      
+      for (let cols = 1; cols <= legendColorCount; cols++) {
+        const rows = Math.ceil(legendColorCount / cols);
+        const cellW = canvasWidth / cols;
+        const cellH = legendHeight / rows;
+        const cellSize = Math.min(cellW, cellH);
+        
+        if (cellSize > bestCellSize) {
+          bestCellSize = cellSize;
+          bestCols = cols;
+        }
+      }
+      
+      const bestRows = Math.ceil(legendColorCount / bestCols);
+      const cellWidth = canvasWidth / bestCols;
+      const cellHeight = legendHeight / bestRows;
+      
+      for (let i = 0; i < colors.length; i++) {
+        const col = i % bestCols;
+        const row = Math.floor(i / bestCols);
+        const x = col * cellWidth;
+        const y = legendY + row * cellHeight;
+        
+        const item = colors[i];
+        const centerX = x + cellWidth / 2;
+        const centerY = y + cellHeight * 0.35;
+        const radius = Math.min(cellWidth, cellHeight) * 0.25;
+        
+        tempCtx.fillStyle = item.hex;
+        tempCtx.beginPath();
+        tempCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        tempCtx.fill();
+        tempCtx.strokeStyle = '#e0e0e0';
+        tempCtx.lineWidth = 2;
+        tempCtx.stroke();
+        
+        tempCtx.fillStyle = '#333';
+        tempCtx.font = 'bold ' + Math.floor(cellHeight * 0.18) + 'px sans-serif';
+        tempCtx.textAlign = 'center';
+        tempCtx.textBaseline = 'middle';
+        tempCtx.fillText(item.code, centerX, y + cellHeight * 0.65);
+        
+        tempCtx.font = Math.floor(cellHeight * 0.14) + 'px sans-serif';
+        tempCtx.fillStyle = '#666';
+        tempCtx.fillText(item.count + ' 粒', centerX, y + cellHeight * 0.85);
+      }
+      
+      const link = document.createElement('a');
+      link.download = 'bead-pattern-' + currentColorTableName + '.png';
+      link.href = tempCanvas.toDataURL('image/png');
+      link.click();
+    });
+
+    document.getElementById('exportPaletteBtn').addEventListener('click', function() {
+      if (!currentColorTable || currentColorTable.length === 0) {
+        alert('当前没有色表');
+        return;
+      }
+      
+      const filteredPalette = currentColorTable.filter(function(c) {
+        return !deletedColorCodes.includes(c.code);
+      });
+      
+      const csvContent = 'HEX,Tag\n' + filteredPalette.map(function(c) {
+        return c.hex + ',' + c.code;
+      }).join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.download = 'palette-' + currentColorTableName + '-modified.csv';
+      link.href = URL.createObjectURL(blob);
+      link.click();
+    });
+
+
+  </script>
+</body>
+</html>
