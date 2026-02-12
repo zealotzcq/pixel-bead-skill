@@ -6,7 +6,7 @@ opencode skill for pixel bead
 Usage：
 1. git clone https://github.com/opencodedev/pixel-bead-skill.git
 
-2. copy the folder pixel-bead to your skill folder
+2. copy the folder: pixel-bead (which is under the folder pixel-bead-skill) to your skill folder
 
 3. open opencode/claude code/etc， spell keyword "pixel bead"
 
@@ -18,6 +18,9 @@ Usage：
 
 6. click "stop server" to close the skill.
 
+Misc:
+color files are placed under pixel-bead-skill/pixel-bead/references/
+or you can export your own color file after editing on the webpage
 
 Supported OS:
 - Windows 10
